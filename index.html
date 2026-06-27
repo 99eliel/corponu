@@ -10,7 +10,12 @@
   <section id="authScreen" class="auth-screen">
     <div class="auth-card">
       <div class="brand auth-brand">
-        <div class="brand-icon">OP</div>
+        <img
+          class="brand-logo"
+          src="https://i.imgur.com/tJDOlNO.png"
+          alt="Logo da empresa"
+          onerror="if(!this.dataset.fallback1){this.dataset.fallback1='1'; this.src='https://i.imgur.com/tJDOlNO.jpg';} else if(!this.dataset.fallback2){this.dataset.fallback2='1'; this.src='https://i.imgur.com/tJDOlNO.jpeg';} else {this.style.display='none';}"
+        />
         <div>
           <h1>OP Confecção</h1>
           <p>Controle de Produção com Firebase</p>
@@ -28,7 +33,10 @@
 
         <label>
           Senha
-          <input id="loginSenha" type="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+          <div class="password-field">
+            <input id="loginSenha" type="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+            <button class="toggle-password" type="button" data-target="loginSenha">Mostrar</button>
+          </div>
         </label>
 
         <button class="btn btn-primary full" type="submit">Entrar</button>
@@ -44,7 +52,12 @@
   <div id="appShell" class="app-shell hidden">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-icon">OP</div>
+        <img
+          class="brand-logo sidebar-logo"
+          src="https://i.imgur.com/tJDOlNO.png"
+          alt="Logo da empresa"
+          onerror="if(!this.dataset.fallback1){this.dataset.fallback1='1'; this.src='https://i.imgur.com/tJDOlNO.jpg';} else if(!this.dataset.fallback2){this.dataset.fallback2='1'; this.src='https://i.imgur.com/tJDOlNO.jpeg';} else {this.style.display='none';}"
+        />
         <div>
           <h1>OP Confecção</h1>
           <p>Controle de Produção</p>
@@ -428,7 +441,10 @@
 
             <label>
               Senha inicial
-              <input id="usuarioSenha" type="password" placeholder="Mínimo 6 caracteres" required />
+              <div class="password-field">
+                <input id="usuarioSenha" type="password" placeholder="Mínimo 6 caracteres" required />
+                <button class="toggle-password" type="button" data-target="usuarioSenha">Mostrar</button>
+              </div>
             </label>
 
             <label>

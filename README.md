@@ -123,3 +123,14 @@ Selecione esse arquivo.
 - Não cria produtos
 - Não cria usuários
 - Não exclui ordens
+
+
+## Ajustes desta versão
+
+- Campo de senha com botão **Mostrar/Ocultar** na tela de login.
+- Campo de senha com botão **Mostrar/Ocultar** na tela de cadastro de usuários.
+- Logo da empresa adicionada na tela de login e no menu lateral usando o link informado.
+
+### Observação sobre a logo
+Foi configurado uso direto do link do Imgur com tentativas automáticas em PNG, JPG e JPEG.
+Se a imagem não carregar no navegador por alguma limitação externa do Imgur, me envie a logo como arquivo de imagem e eu troco para uma versão local dentro do projeto.

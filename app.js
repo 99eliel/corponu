@@ -118,6 +118,7 @@ const reportInfo = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  configurarVisibilidadeSenhas();
   configurarAuth();
   configurarNavegacao();
   configurarProduto();
@@ -127,6 +128,21 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarBackup();
   preencherAnoAtual();
 });
+
+
+function configurarVisibilidadeSenhas() {
+  document.querySelectorAll(".toggle-password").forEach(botao => {
+    botao.addEventListener("click", () => {
+      const targetId = botao.dataset.target;
+      const input = document.getElementById(targetId);
+      if (!input) return;
+
+      const mostrando = input.type === "text";
+      input.type = mostrando ? "password" : "text";
+      botao.textContent = mostrando ? "Mostrar" : "Ocultar";
+    });
+  });
+}
 
 function configurarAuth() {
   document.getElementById("loginForm").addEventListener("submit", async event => {
