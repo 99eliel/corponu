@@ -21,7 +21,8 @@ import {
   serverTimestamp,
   runTransaction,
   writeBatch,
-  getDocs
+  getDocs,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -47,6 +48,7 @@ const state = {
   produtos: [],
   ordens: [],
   usuarios: [],
+  logs: [],
   relatorioAtual: "enfesto",
   unsubscribers: []
 };
@@ -71,6 +73,10 @@ const pageInfo = {
   usuarios: {
     title: "Usuários",
     subtitle: "Gerencie logins comuns e admins."
+  },
+  logs: {
+    title: "Logs / Auditoria",
+    subtitle: "Acompanhe quem fez as ações importantes dentro do sistema."
   },
   backup: {
     title: "Importar / Backup",
@@ -125,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarOrdem();
   configurarRelatorios();
   configurarUsuarios();
+  configurarLogs();
   configurarBackup();
   preencherAnoAtual();
 });
@@ -215,6 +222,7 @@ function configurarAuth() {
       state.perfil = perfil;
       mostrarSistema();
       iniciarListenersFirestore();
+      registrarLog("login", "auth", user.uid, "Usuário entrou no sistema.");
     } catch (error) {
       console.error(error);
       await signOut(auth);
@@ -273,6 +281,7 @@ function iniciarListenersFirestore() {
 
   if (ehAdmin()) {
     const usuariosQuery = query(collection(db, "usuarios"), orderBy("nome", "asc"));
+    const logsQuery = query(collection(db, "logsAlteracoes"), orderBy("criadoEm", "desc"));
 
     state.unsubscribers.push(onSnapshot(usuariosQuery, snapshot => {
       state.usuarios = snapshot.docs.map(item => ({ uid: item.id, ...item.data() }));
@@ -280,6 +289,14 @@ function iniciarListenersFirestore() {
     }, error => {
       console.error(error);
       toast("Erro ao carregar usuários.");
+    }));
+
+    state.unsubscribers.push(onSnapshot(logsQuery, snapshot => {
+      state.logs = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+      renderLogs();
+    }, error => {
+      console.error(error);
+      toast("Erro ao carregar logs.");
     }));
   }
 }
@@ -293,7 +310,7 @@ function aplicarPermissoesTela() {
 
   if (!admin) {
     const paginaAtiva = document.querySelector(".page.active")?.id;
-    if (paginaAtiva === "usuarios" || paginaAtiva === "backup") {
+    if (paginaAtiva === "usuarios" || paginaAtiva === "backup" || paginaAtiva === "logs") {
       abrirPagina("dashboard");
     }
   }
@@ -306,7 +323,7 @@ function ehAdmin() {
 function configurarNavegacao() {
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      if ((btn.dataset.page === "usuarios" || btn.dataset.page === "backup") && !ehAdmin()) {
+      if ((btn.dataset.page === "usuarios" || btn.dataset.page === "backup" || btn.dataset.page === "logs") && !ehAdmin()) {
         toast("Apenas admin acessa esta área.");
         return;
       }
@@ -369,6 +386,8 @@ function configurarProduto() {
       const docId = produtoIdAtual || docIdSeguro(referencia);
       await setDoc(doc(db, "produtos", docId), produto, { merge: true });
 
+      await registrarLog(produtoIdAtual ? "produto_atualizado" : "produto_criado", "produto", docId, `Referência ${referencia} - ${nome}`);
+
       limparFormProduto();
       toast("Produto salvo no Firebase.");
       restaurarOrdemPendenteSePossivel({ id: docId, ...produto });
@@ -430,6 +449,7 @@ async function excluirProduto(id) {
 
   try {
     await deleteDoc(doc(db, "produtos", id));
+    await registrarLog("produto_excluido", "produto", id, `Referência ${produto.referencia} - ${produto.nome}`);
     toast("Produto excluído.");
   } catch (error) {
     console.error(error);
@@ -509,6 +529,7 @@ function configurarOrdem() {
         });
 
         await setDoc(doc(db, "ordensProducao", id), ordemAtualizada, { merge: true });
+        await registrarLog("ordem_atualizada", "ordemProducao", id, `${ordemAtualizada.numeroOP} | Ref. ${referencia} | Cor ${cor} | Qtd. ${quantidade}`);
         toast("OP atualizada.");
       } else {
         const numeroOP = await gerarNumeroOPFirebase(ano);
@@ -525,7 +546,9 @@ function configurarOrdem() {
           criada: true
         });
 
-        await setDoc(doc(db, "ordensProducao", docIdSeguro(numeroOP)), ordemNova);
+        const ordemDocId = docIdSeguro(numeroOP);
+        await setDoc(doc(db, "ordensProducao", ordemDocId), ordemNova);
+        await registrarLog("ordem_criada", "ordemProducao", ordemDocId, `${numeroOP} | Ref. ${referencia} | Cor ${cor} | Qtd. ${quantidade}`);
         toast("OP cadastrada.");
       }
 
@@ -735,7 +758,9 @@ async function excluirOrdem(id) {
   if (!confirm("Deseja excluir esta ordem de produção?")) return;
 
   try {
+    const ordem = state.ordens.find(op => op.id === id);
     await deleteDoc(doc(db, "ordensProducao", id));
+    await registrarLog("ordem_excluida", "ordemProducao", id, `${ordem?.numeroOP || id} | Ref. ${ordem?.referencia || "-"} | Cor ${ordem?.cor || "-"}`);
     toast("OP excluída.");
   } catch (error) {
     console.error(error);
@@ -917,6 +942,8 @@ function configurarUsuarios() {
         atualizadoEm: serverTimestamp()
       });
 
+      await registrarLog("usuario_criado", "usuario", cred.user.uid, `${nome} | ${email} | ${tipo}`);
+
       await signOut(secondaryAuth);
 
       document.getElementById("formUsuario").reset();
@@ -974,11 +1001,127 @@ async function alternarUsuario(uid, novoStatus) {
       atualizadoEm: serverTimestamp()
     });
 
+    const usuario = state.usuarios.find(item => item.uid === uid);
+    await registrarLog("usuario_status_alterado", "usuario", uid, `${usuario?.nome || uid} | status: ${novoStatus ? "ativo" : "inativo"}`);
+
     toast("Usuário atualizado.");
   } catch (error) {
     console.error(error);
     toast("Erro ao atualizar usuário.");
   }
+}
+
+
+function configurarLogs() {
+  const busca = document.getElementById("buscaLog");
+  if (busca) {
+    busca.addEventListener("input", renderLogs);
+  }
+}
+
+function renderLogs() {
+  const tbody = document.getElementById("listaLogs");
+  if (!tbody) return;
+
+  if (!ehAdmin()) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Apenas admin pode visualizar logs.</td></tr>`;
+    return;
+  }
+
+  const busca = normalizarTexto(document.getElementById("buscaLog")?.value || "");
+  let logs = [...state.logs];
+
+  if (busca) {
+    logs = logs.filter(log => {
+      const texto = normalizarTexto([
+        log.usuarioNome,
+        log.usuarioEmail,
+        log.acao,
+        log.tipoAlvo,
+        log.alvoId,
+        log.detalhes
+      ].join(" "));
+      return texto.includes(busca);
+    });
+  }
+
+  if (!logs.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Nenhum log encontrado.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = logs.slice(0, 300).map(log => `
+    <tr>
+      <td>${escapeHtml(formatarDataHora(log.criadoEm))}</td>
+      <td>
+        <strong>${escapeHtml(log.usuarioNome || "-")}</strong><br>
+        <small>${escapeHtml(log.usuarioEmail || "-")}</small>
+      </td>
+      <td>${escapeHtml(log.tipoAlvo || "-")}</td>
+      <td><span class="log-action">${escapeHtml(labelAcaoLog(log.acao))}</span></td>
+      <td>${escapeHtml(log.alvoId || "-")}</td>
+      <td class="log-detail">${escapeHtml(log.detalhes || "-")}</td>
+    </tr>
+  `).join("");
+}
+
+async function registrarLog(acao, tipoAlvo, alvoId, detalhes = "") {
+  if (!state.currentUser || !state.perfil) return;
+
+  try {
+    await addDoc(collection(db, "logsAlteracoes"), {
+      acao,
+      tipoAlvo,
+      alvoId: String(alvoId || ""),
+      detalhes: String(detalhes || ""),
+      usuarioUid: state.currentUser.uid,
+      usuarioNome: state.perfil.nome || "",
+      usuarioEmail: state.perfil.email || state.currentUser.email || "",
+      usuarioTipo: state.perfil.tipo || "",
+      criadoEm: serverTimestamp()
+    });
+  } catch (error) {
+    console.warn("Não foi possível registrar log:", error);
+  }
+}
+
+function labelAcaoLog(acao) {
+  const labels = {
+    login: "Login",
+    produto_criado: "Produto criado",
+    produto_atualizado: "Produto atualizado",
+    produto_excluido: "Produto excluído",
+    ordem_criada: "OP criada",
+    ordem_atualizada: "OP atualizada",
+    ordem_excluida: "OP excluída",
+    usuario_criado: "Usuário criado",
+    usuario_status_alterado: "Status de usuário",
+    backup_importado: "Backup importado",
+    backup_exportado: "Backup exportado",
+    relatorio_exportado: "Relatório exportado"
+  };
+
+  return labels[acao] || acao || "-";
+}
+
+function formatarDataHora(valor) {
+  if (!valor) return "-";
+
+  const data = typeof valor.toDate === "function" ? valor.toDate() : new Date(valor);
+
+  if (Number.isNaN(data.getTime())) return "-";
+
+  return data.toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short"
+  });
+}
+
+function normalizarTexto(valor) {
+  return String(valor || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function configurarBackup() {
@@ -1004,6 +1147,7 @@ function configurarBackup() {
         if (!confirm("Importar estes dados para o Firestore? Documentos com mesmo ID serão atualizados.")) return;
 
         await importarBackupFirestore(backup);
+        await registrarLog("backup_importado", "importacao", "backup-json", `${backup.produtos.length} produtos e ${backup.ordens.length} ordens importados`);
         toast("Dados importados para o Firebase.");
       } catch (error) {
         console.error(error);
@@ -1118,6 +1262,7 @@ function baixarBackupAtual() {
   link.click();
 
   URL.revokeObjectURL(url);
+  registrarLog("backup_exportado", "exportacao", "backup-atual", `${state.produtos.length} produtos e ${state.ordens.length} ordens exportados`);
 }
 
 function renderTudo() {
@@ -1127,6 +1272,7 @@ function renderTudo() {
   renderDatalistReferencias();
   renderDatalistCores();
   renderRelatorio();
+  renderLogs();
   aplicarPermissoesTela();
 }
 
@@ -1319,6 +1465,7 @@ function exportarCSV() {
   link.click();
 
   URL.revokeObjectURL(url);
+  registrarLog("relatorio_exportado", "relatorio", state.relatorioAtual, `${reportInfo[state.relatorioAtual].title} exportado em CSV`);
 }
 
 function preencherAnoAtual() {

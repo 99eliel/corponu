@@ -22,6 +22,15 @@
         </div>
       </div>
 
+      <div class="company-hero">
+        <img
+          src="https://i.imgur.com/tJDOlNO.png"
+          alt="Logo da empresa"
+          onerror="if(!this.dataset.fallback1){this.dataset.fallback1='1'; this.src='https://i.imgur.com/tJDOlNO.jpg';} else if(!this.dataset.fallback2){this.dataset.fallback2='1'; this.src='https://i.imgur.com/tJDOlNO.jpeg';} else {this.style.display='none';}"
+        />
+        <span>Sistema personalizado para controle de produção</span>
+      </div>
+
       <form id="loginForm" class="form">
         <h2>Entrar no sistema</h2>
         <p class="muted">Use o e-mail e senha cadastrados no Firebase Authentication.</p>
@@ -70,15 +79,24 @@
         <button class="nav-btn" data-page="ordens">Ordens de Produção</button>
         <button class="nav-btn" data-page="relatorios">Relatórios</button>
         <button class="nav-btn admin-only" data-page="usuarios">Usuários</button>
+        <button class="nav-btn admin-only" data-page="logs">Logs / Auditoria</button>
         <button class="nav-btn admin-only" data-page="backup">Importar / Backup</button>
       </nav>
     </aside>
 
     <main class="main">
       <header class="topbar">
-        <div>
-          <h2 id="pageTitle">Dashboard</h2>
-          <p id="pageSubtitle">Resumo geral das ordens e referências cadastradas.</p>
+        <div class="topbar-title">
+          <img
+            class="topbar-logo"
+            src="https://i.imgur.com/tJDOlNO.png"
+            alt="Logo da empresa"
+            onerror="if(!this.dataset.fallback1){this.dataset.fallback1='1'; this.src='https://i.imgur.com/tJDOlNO.jpg';} else if(!this.dataset.fallback2){this.dataset.fallback2='1'; this.src='https://i.imgur.com/tJDOlNO.jpeg';} else {this.style.display='none';}"
+          />
+          <div>
+            <h2 id="pageTitle">Dashboard</h2>
+            <p id="pageSubtitle">Resumo geral das ordens e referências cadastradas.</p>
+          </div>
         </div>
 
         <div class="user-box">
@@ -91,6 +109,18 @@
       </header>
 
       <section id="dashboard" class="page active">
+        <div class="brand-banner">
+          <img
+            src="https://i.imgur.com/tJDOlNO.png"
+            alt="Logo da empresa"
+            onerror="if(!this.dataset.fallback1){this.dataset.fallback1='1'; this.src='https://i.imgur.com/tJDOlNO.jpg';} else if(!this.dataset.fallback2){this.dataset.fallback2='1'; this.src='https://i.imgur.com/tJDOlNO.jpeg';} else {this.style.display='none';}"
+          />
+          <div>
+            <strong>Controle de Ordens de Produção</strong>
+            <span>Relatórios por enfesto, corte, separação, renda, alça e bojo.</span>
+          </div>
+        </div>
+
         <div class="cards">
           <div class="card">
             <span>Produtos cadastrados</span>
@@ -405,9 +435,16 @@
             </div>
           </div>
 
-          <div class="report-title">
-            <h3 id="tituloRelatorio">Relatório de Enfesto</h3>
-            <p id="subtituloRelatorio">Processo geral: todas as ordens aparecem neste relatório.</p>
+          <div class="report-title report-title-branded">
+            <img
+              src="https://i.imgur.com/tJDOlNO.png"
+              alt="Logo da empresa"
+              onerror="if(!this.dataset.fallback1){this.dataset.fallback1='1'; this.src='https://i.imgur.com/tJDOlNO.jpg';} else if(!this.dataset.fallback2){this.dataset.fallback2='1'; this.src='https://i.imgur.com/tJDOlNO.jpeg';} else {this.style.display='none';}"
+            />
+            <div>
+              <h3 id="tituloRelatorio">Relatório de Enfesto</h3>
+              <p id="subtituloRelatorio">Processo geral: todas as ordens aparecem neste relatório.</p>
+            </div>
           </div>
 
           <div class="table-wrap">
@@ -486,6 +523,39 @@
                 <tbody id="listaUsuarios"></tbody>
               </table>
             </div>
+          </div>
+        </div>
+      </section>
+
+
+      <section id="logs" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Logs / Auditoria</h3>
+              <p>Registro das ações feitas no sistema: quem fez, quando fez e o que foi alterado.</p>
+            </div>
+            <input id="buscaLog" class="search" type="text" placeholder="Buscar usuário, ação ou detalhe..." />
+          </div>
+
+          <div class="notice small">
+            <strong>Auditoria:</strong> os registros são criados automaticamente no Firestore. Usuários comuns gravam suas próprias ações, mas somente admin consegue visualizar esta tela.
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Usuário</th>
+                  <th>Tipo</th>
+                  <th>Ação</th>
+                  <th>Alvo</th>
+                  <th>Detalhes</th>
+                </tr>
+              </thead>
+              <tbody id="listaLogs"></tbody>
+            </table>
           </div>
         </div>
       </section>

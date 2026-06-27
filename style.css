@@ -725,3 +725,145 @@ th {
     min-height: 42px;
   }
 }
+
+
+.company-hero {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  margin: 8px 0 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(17, 24, 39, 0.04));
+  text-align: center;
+}
+
+.company-hero img {
+  width: 150px;
+  max-height: 88px;
+  object-fit: contain;
+}
+
+.company-hero span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.topbar-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 7px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.brand-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: linear-gradient(135deg, #ffffff, #f5f3ff);
+  border: 1px solid rgba(124, 58, 237, 0.16);
+  border-radius: 22px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.06);
+}
+
+.brand-banner img {
+  width: 110px;
+  max-height: 70px;
+  object-fit: contain;
+  background: white;
+  border-radius: 16px;
+  padding: 8px;
+  border: 1px solid var(--border);
+}
+
+.brand-banner strong {
+  display: block;
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.brand-banner span {
+  color: var(--muted);
+}
+
+.report-title-branded {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.report-title-branded img {
+  width: 72px;
+  height: 48px;
+  object-fit: contain;
+  background: white;
+  border-radius: 12px;
+  padding: 5px;
+  border: 1px solid var(--border);
+}
+
+.log-action {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(124, 58, 237, 0.12);
+  color: #5b21b6;
+}
+
+.log-detail {
+  max-width: 360px;
+  white-space: normal;
+  line-height: 1.45;
+}
+
+@media print {
+  .report-title-branded {
+    border: none;
+    background: white;
+  }
+
+  .report-title-branded img {
+    display: block !important;
+  }
+}
+
+@media (max-width: 780px) {
+  .topbar-title,
+  .brand-banner,
+  .report-title-branded {
+    align-items: flex-start;
+  }
+
+  .topbar-title {
+    width: 100%;
+  }
+
+  .brand-banner,
+  .report-title-branded {
+    flex-direction: column;
+  }
+
+  .company-hero img {
+    width: 120px;
+  }
+}
