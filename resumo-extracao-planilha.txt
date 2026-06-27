@@ -1,0 +1,17 @@
+Resumo da extração da planilha PROGRAMAÇÃO SETORIAL
+
+Abas encontradas: ENFESTO, SEPARAÇÃO, CORTE, RENDA, ALÇA, BOJO, EMBOJAMENTO, UNIÃO, FÊNIX, ÁGUIA, COTTON, ELITE, ESPERANÇA, POWER, SUPERAÇÃO
+
+Dados aproveitados para simulação:
+- Produtos/referências: 52
+- Ordens de produção: 176
+- Base principal das ordens: aba SEPARAÇÃO
+- Referências com renda: 3 (250, 360, 690)
+- Referências com alça: 10 (411, 414, 505, 508, 515, 580, 751, 754, 777, 900)
+- Referências com bojo: 11 (411, 414, 505, 508, 515, 580, 751, 754, 777, 900, 912)
+
+Observações:
+- Como não havia nome comercial do produto na planilha, cada produto foi nomeado como "Referência XXX".
+- O campo COR foi mantido nas observações da OP.
+- A semana foi extraída dos títulos da aba SEPARAÇÃO.
+- Para simulação, a Semana 1 ficou em Junho/2026 e a Semana 2 ficou em Julho/2026, pois a planilha indica período de 28/06 a 18/07.

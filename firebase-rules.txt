@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function usuarioExiste() {
+      return logado()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function meuPerfil() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function ativo() {
+      return usuarioExiste()
+        && meuPerfil().data.ativo == true;
+    }
+
+    function admin() {
+      return ativo()
+        && meuPerfil().data.tipo == "admin";
+    }
+
+    function usuarioComum() {
+      return ativo()
+        && meuPerfil().data.tipo in ["admin", "usuario"];
+    }
+
+    match /usuarios/{userId} {
+      allow read: if admin() || (logado() && request.auth.uid == userId);
+      allow create: if admin();
+      allow update: if admin();
+      allow delete: if admin();
+    }
+
+    match /produtos/{produtoId} {
+      allow read: if usuarioComum();
+      allow create, update, delete: if admin();
+    }
+
+    match /ordensProducao/{ordemId} {
+      allow read: if usuarioComum();
+      allow create, update: if usuarioComum();
+      allow delete: if admin();
+    }
+
+    match /configuracoes/{docId} {
+      allow read: if usuarioComum();
+      allow write: if admin();
+    }
+  }
+}

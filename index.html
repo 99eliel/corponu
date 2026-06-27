@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema OP Confecção</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="brand auth-brand">
+        <div class="brand-icon">OP</div>
+        <div>
+          <h1>OP Confecção</h1>
+          <p>Controle de Produção com Firebase</p>
+        </div>
+      </div>
+
+      <form id="loginForm" class="form">
+        <h2>Entrar no sistema</h2>
+        <p class="muted">Use o e-mail e senha cadastrados no Firebase Authentication.</p>
+
+        <label>
+          E-mail
+          <input id="loginEmail" type="email" placeholder="seuemail@empresa.com" autocomplete="email" required />
+        </label>
+
+        <label>
+          Senha
+          <input id="loginSenha" type="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+        </label>
+
+        <button class="btn btn-primary full" type="submit">Entrar</button>
+        <button class="btn full" type="button" id="btnResetSenha">Esqueci minha senha</button>
+
+        <div class="notice small">
+          O primeiro usuário admin precisa existir em <strong>Authentication</strong> e também na coleção <strong>usuarios</strong> usando o mesmo UID.
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">OP</div>
+        <div>
+          <h1>OP Confecção</h1>
+          <p>Controle de Produção</p>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+        <button class="nav-btn" data-page="produtos">Produtos / Referências</button>
+        <button class="nav-btn" data-page="ordens">Ordens de Produção</button>
+        <button class="nav-btn" data-page="relatorios">Relatórios</button>
+        <button class="nav-btn admin-only" data-page="usuarios">Usuários</button>
+        <button class="nav-btn admin-only" data-page="backup">Importar / Backup</button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Dashboard</h2>
+          <p id="pageSubtitle">Resumo geral das ordens e referências cadastradas.</p>
+        </div>
+
+        <div class="user-box">
+          <div>
+            <strong id="userName">Usuário</strong>
+            <span id="userRole">Carregando...</span>
+          </div>
+          <button class="btn" id="btnLogout">Sair</button>
+        </div>
+      </header>
+
+      <section id="dashboard" class="page active">
+        <div class="cards">
+          <div class="card">
+            <span>Produtos cadastrados</span>
+            <strong id="totalProdutos">0</strong>
+          </div>
+          <div class="card">
+            <span>Ordens cadastradas</span>
+            <strong id="totalOrdens">0</strong>
+          </div>
+          <div class="card">
+            <span>Ordens com renda</span>
+            <strong id="totalRenda">0</strong>
+          </div>
+          <div class="card">
+            <span>Ordens com alça</span>
+            <strong id="totalAlca">0</strong>
+          </div>
+          <div class="card">
+            <span>Ordens com bojo</span>
+            <strong id="totalBojo">0</strong>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Últimas ordens</h3>
+              <p>As ordens mais recentes aparecem aqui.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>OP</th>
+                  <th>Semana</th>
+                  <th>Mês/Ano</th>
+                  <th>Referência</th>
+                  <th>Cor</th>
+                  <th>Produto</th>
+                  <th>Qtd.</th>
+                  <th>Alça</th>
+                  <th>Bojo</th>
+                  <th>Renda</th>
+                </tr>
+              </thead>
+              <tbody id="ultimasOrdens"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="produtos" class="page">
+        <div class="grid-2">
+          <form class="panel form admin-only-block" id="formProduto">
+            <div class="panel-header">
+              <div>
+                <h3>Cadastrar produto</h3>
+                <p>Somente admin cadastra/edita referências.</p>
+              </div>
+            </div>
+
+            <input type="hidden" id="produtoId" />
+
+            <label>
+              Referência
+              <input id="produtoReferencia" type="text" placeholder="Ex: 414" required />
+            </label>
+
+            <label>
+              Nome / descrição do produto
+              <input id="produtoNome" type="text" placeholder="Ex: Referência 414" required />
+            </label>
+
+            <div class="checks">
+              <label class="check">
+                <input id="produtoAlca" type="checkbox" />
+                <span>Possui alça</span>
+              </label>
+              <label class="check">
+                <input id="produtoBojo" type="checkbox" />
+                <span>Possui bojo</span>
+              </label>
+              <label class="check">
+                <input id="produtoRenda" type="checkbox" />
+                <span>Possui renda</span>
+              </label>
+            </div>
+
+            <label>
+              Observações
+              <textarea id="produtoObs" rows="3" placeholder="Opcional"></textarea>
+            </label>
+
+            <div class="actions">
+              <button class="btn btn-primary" type="submit">Salvar produto</button>
+              <button class="btn" type="button" id="btnCancelarProduto">Cancelar</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>Produtos cadastrados</h3>
+                <p>Lista de referências disponíveis para criar OP.</p>
+              </div>
+              <input id="buscaProduto" class="search" type="text" placeholder="Buscar referência..." />
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Referência</th>
+                    <th>Produto</th>
+                    <th>Alça</th>
+                    <th>Bojo</th>
+                    <th>Renda</th>
+                    <th class="admin-only-cell">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="listaProdutos"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="ordens" class="page">
+        <div class="grid-2">
+          <form class="panel form" id="formOrdem">
+            <div class="panel-header">
+              <div>
+                <h3>Adicionar ordem de produção</h3>
+                <p>A OP usa referência + cor como dados principais.</p>
+              </div>
+            </div>
+
+            <input type="hidden" id="ordemId" />
+
+            <label>
+              Referência do produto
+              <input id="ordemReferencia" type="text" placeholder="Digite a referência cadastrada" list="referenciasList" required />
+              <datalist id="referenciasList"></datalist>
+            </label>
+
+            <div id="produtoPreview" class="preview hidden"></div>
+
+            <label>
+              Cor
+              <input id="ordemCor" type="text" placeholder="Ex: PRETO, BLUSH, CHOCOLATE" list="coresList" required />
+              <datalist id="coresList"></datalist>
+            </label>
+
+            <label>
+              Quantidade
+              <input id="ordemQuantidade" type="number" min="1" placeholder="Ex: 500" required />
+            </label>
+
+            <div class="row">
+              <label>
+                Semana
+                <select id="ordemSemana" required>
+                  <option value="">Selecione</option>
+                  <option value="1">Semana 1</option>
+                  <option value="2">Semana 2</option>
+                  <option value="3">Semana 3</option>
+                  <option value="4">Semana 4</option>
+                  <option value="5">Semana 5</option>
+                </select>
+              </label>
+
+              <label>
+                Mês
+                <select id="ordemMes" required>
+                  <option value="">Selecione</option>
+                  <option>Janeiro</option>
+                  <option>Fevereiro</option>
+                  <option>Março</option>
+                  <option>Abril</option>
+                  <option>Maio</option>
+                  <option>Junho</option>
+                  <option>Julho</option>
+                  <option>Agosto</option>
+                  <option>Setembro</option>
+                  <option>Outubro</option>
+                  <option>Novembro</option>
+                  <option>Dezembro</option>
+                </select>
+              </label>
+
+              <label>
+                Ano
+                <input id="ordemAno" type="number" min="2020" max="2100" required />
+              </label>
+            </div>
+
+            <label>
+              Observações da OP
+              <textarea id="ordemObs" rows="3" placeholder="Opcional"></textarea>
+            </label>
+
+            <div class="actions">
+              <button class="btn btn-primary" type="submit">Salvar OP</button>
+              <button class="btn" type="button" id="btnCancelarOrdem">Cancelar</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>Ordens cadastradas</h3>
+                <p>Usuário comum pode criar e editar OP. Exclusão fica para admin.</p>
+              </div>
+              <input id="buscaOrdem" class="search" type="text" placeholder="Buscar OP, referência ou cor..." />
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>OP</th>
+                    <th>Semana</th>
+                    <th>Mês/Ano</th>
+                    <th>Referência</th>
+                    <th>Cor</th>
+                    <th>Produto</th>
+                    <th>Qtd.</th>
+                    <th>Alça</th>
+                    <th>Bojo</th>
+                    <th>Renda</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="listaOrdens"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="relatorios" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>Relatórios de produção</h3>
+              <p>Enfesto, corte e separação são gerais. Renda, alça e bojo mostram somente o setor selecionado.</p>
+            </div>
+          </div>
+
+          <div class="report-buttons">
+            <button class="report-btn active" data-relatorio="enfesto">Enfesto</button>
+            <button class="report-btn" data-relatorio="corte">Corte</button>
+            <button class="report-btn" data-relatorio="separacao">Separação</button>
+            <button class="report-btn" data-relatorio="renda">Renda</button>
+            <button class="report-btn" data-relatorio="alca">Alça</button>
+            <button class="report-btn" data-relatorio="bojo">Bojo</button>
+          </div>
+
+          <div class="filters">
+            <label>
+              Semana
+              <select id="filtroSemana">
+                <option value="">Todas</option>
+                <option value="1">Semana 1</option>
+                <option value="2">Semana 2</option>
+                <option value="3">Semana 3</option>
+                <option value="4">Semana 4</option>
+                <option value="5">Semana 5</option>
+              </select>
+            </label>
+
+            <label>
+              Mês
+              <select id="filtroMes">
+                <option value="">Todos</option>
+                <option>Janeiro</option>
+                <option>Fevereiro</option>
+                <option>Março</option>
+                <option>Abril</option>
+                <option>Maio</option>
+                <option>Junho</option>
+                <option>Julho</option>
+                <option>Agosto</option>
+                <option>Setembro</option>
+                <option>Outubro</option>
+                <option>Novembro</option>
+                <option>Dezembro</option>
+              </select>
+            </label>
+
+            <label>
+              Ano
+              <input id="filtroAno" type="number" placeholder="Todos" />
+            </label>
+
+            <label>
+              Referência
+              <input id="filtroReferencia" type="text" placeholder="Todas" />
+            </label>
+
+            <label>
+              Cor
+              <input id="filtroCor" type="text" placeholder="Todas" list="coresList" />
+            </label>
+
+            <div class="filter-actions">
+              <button class="btn btn-primary" id="btnAplicarFiltros">Aplicar filtros</button>
+              <button class="btn" id="btnLimparFiltros">Limpar</button>
+              <button class="btn btn-success" id="btnExportarCSV">Exportar CSV</button>
+              <button class="btn" id="btnImprimir">Imprimir</button>
+            </div>
+          </div>
+
+          <div class="report-title">
+            <h3 id="tituloRelatorio">Relatório de Enfesto</h3>
+            <p id="subtituloRelatorio">Processo geral: todas as ordens aparecem neste relatório.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table id="tabelaRelatorio">
+              <thead id="cabecalhoRelatorio"></thead>
+              <tbody id="corpoRelatorio"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="usuarios" class="page">
+        <div class="grid-2">
+          <form class="panel form" id="formUsuario">
+            <div class="panel-header">
+              <div>
+                <h3>Cadastrar usuário</h3>
+                <p>Somente admin cria logins comuns.</p>
+              </div>
+            </div>
+
+            <label>
+              Nome
+              <input id="usuarioNome" type="text" placeholder="Nome do usuário" required />
+            </label>
+
+            <label>
+              E-mail
+              <input id="usuarioEmail" type="email" placeholder="email@empresa.com" required />
+            </label>
+
+            <label>
+              Senha inicial
+              <input id="usuarioSenha" type="password" placeholder="Mínimo 6 caracteres" required />
+            </label>
+
+            <label>
+              Tipo
+              <select id="usuarioTipo" required>
+                <option value="usuario">Usuário comum</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+
+            <div class="actions">
+              <button class="btn btn-primary" type="submit">Criar login</button>
+            </div>
+
+            <div class="notice small">
+              O usuário será criado no Firebase Authentication e também na coleção <strong>usuarios</strong>.
+            </div>
+          </form>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>Usuários cadastrados</h3>
+                <p>Controle de acesso por tipo e status.</p>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="listaUsuarios"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="backup" class="page">
+        <div class="panel form">
+          <div class="panel-header">
+            <div>
+              <h3>Importar dados para o Firebase</h3>
+              <p>Use para subir os dados extraídos da planilha para o Firestore.</p>
+            </div>
+          </div>
+
+          <div class="actions">
+            <label class="btn btn-success file-btn">
+              Importar backup JSON para Firestore
+              <input type="file" id="inputImportarFirestore" accept=".json" hidden />
+            </label>
+            <button class="btn" id="btnBaixarBackupAtual">Baixar backup atual JSON</button>
+          </div>
+
+          <div class="notice">
+            <strong>Importante:</strong> esta importação é indicada para admin. Use o arquivo
+            <strong>backup-op-confeccao-planilha.json</strong> que está dentro deste ZIP.
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
