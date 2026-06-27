@@ -136,37 +136,34 @@ Foi configurado uso direto do link do Imgur com tentativas automáticas em PNG, 
 Se a imagem não carregar no navegador por alguma limitação externa do Imgur, me envie a logo como arquivo de imagem e eu troco para uma versão local dentro do projeto.
 
 
-## Atualização: Logs / Auditoria e identidade visual
+## Atualização: interface original com logs
 
-Esta versão adiciona uma área administrativa chamada **Logs / Auditoria**.
+Esta versão mantém a interface visual anterior, sem a personalização pesada da última versão.
 
-Ela registra automaticamente ações importantes:
+Foi mantido/adicionado:
 
-- Login no sistema
+- Aba **Logs / Auditoria** para admin.
+- Registro automático de ações importantes.
+- Busca dentro dos logs.
+- Exportação dos logs em CSV.
+
+### Ações registradas
+
+- Login
 - Produto criado
 - Produto atualizado
 - Produto excluído
-- Ordem de produção criada
-- Ordem de produção atualizada
-- Ordem de produção excluída
+- OP criada
+- OP atualizada
+- OP excluída
 - Usuário criado
 - Usuário ativado/desativado
 - Backup importado
 - Backup exportado
-- Relatório exportado em CSV
+- Relatório exportado
+- Logs exportados
 
-Cada log salva:
-
-- Data e hora
-- Nome do usuário
-- E-mail do usuário
-- Tipo de usuário
-- Ação realizada
-- Tipo do alvo
-- ID do alvo
-- Detalhes da ação
-
-### Nova coleção no Firestore
+### Firestore
 
 Foi adicionada a coleção:
 
@@ -175,17 +172,3 @@ logsAlteracoes
 ```
 
 Copie novamente o conteúdo do arquivo `firebase-rules.txt` para o Firestore Rules e publique.
-
-### Personalização visual
-
-A logo da empresa agora aparece em mais locais:
-
-- Tela de login
-- Cartão principal do login
-- Menu lateral
-- Barra superior
-- Banner do dashboard
-- Cabeçalho dos relatórios
-- Impressão dos relatórios
-
-Se o Imgur bloquear a imagem, envie a logo como arquivo aqui no chat para embutirmos localmente no projeto.

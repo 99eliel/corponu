@@ -76,7 +76,7 @@ const pageInfo = {
   },
   logs: {
     title: "Logs / Auditoria",
-    subtitle: "Acompanhe quem fez as ações importantes dentro do sistema."
+    subtitle: "Acompanhe quem fez as ações importantes no sistema."
   },
   backup: {
     title: "Importar / Backup",
@@ -385,7 +385,6 @@ function configurarProduto() {
     try {
       const docId = produtoIdAtual || docIdSeguro(referencia);
       await setDoc(doc(db, "produtos", docId), produto, { merge: true });
-
       await registrarLog(produtoIdAtual ? "produto_atualizado" : "produto_criado", "produto", docId, `Referência ${referencia} - ${nome}`);
 
       limparFormProduto();
@@ -943,7 +942,6 @@ function configurarUsuarios() {
       });
 
       await registrarLog("usuario_criado", "usuario", cred.user.uid, `${nome} | ${email} | ${tipo}`);
-
       await signOut(secondaryAuth);
 
       document.getElementById("formUsuario").reset();
@@ -1017,6 +1015,11 @@ function configurarLogs() {
   if (busca) {
     busca.addEventListener("input", renderLogs);
   }
+
+  const btn = document.getElementById("btnExportarLogs");
+  if (btn) {
+    btn.addEventListener("click", exportarLogsCSV);
+  }
 }
 
 function renderLogs() {
@@ -1036,6 +1039,7 @@ function renderLogs() {
       const texto = normalizarTexto([
         log.usuarioNome,
         log.usuarioEmail,
+        log.usuarioTipo,
         log.acao,
         log.tipoAlvo,
         log.alvoId,
@@ -1057,12 +1061,58 @@ function renderLogs() {
         <strong>${escapeHtml(log.usuarioNome || "-")}</strong><br>
         <small>${escapeHtml(log.usuarioEmail || "-")}</small>
       </td>
-      <td>${escapeHtml(log.tipoAlvo || "-")}</td>
       <td><span class="log-action">${escapeHtml(labelAcaoLog(log.acao))}</span></td>
+      <td>${escapeHtml(log.tipoAlvo || "-")}</td>
       <td>${escapeHtml(log.alvoId || "-")}</td>
       <td class="log-detail">${escapeHtml(log.detalhes || "-")}</td>
     </tr>
   `).join("");
+}
+
+function exportarLogsCSV() {
+  if (!ehAdmin()) {
+    toast("Apenas admin pode exportar logs.");
+    return;
+  }
+
+  const logs = [...state.logs];
+
+  if (!logs.length) {
+    toast("Não há logs para exportar.");
+    return;
+  }
+
+  const linhas = [
+    ["Data/Hora", "Usuário", "E-mail", "Tipo usuário", "Ação", "Tipo alvo", "Item", "Detalhes"]
+  ];
+
+  logs.forEach(log => {
+    linhas.push([
+      formatarDataHora(log.criadoEm),
+      log.usuarioNome || "",
+      log.usuarioEmail || "",
+      log.usuarioTipo || "",
+      labelAcaoLog(log.acao),
+      log.tipoAlvo || "",
+      log.alvoId || "",
+      log.detalhes || ""
+    ]);
+  });
+
+  const csv = linhas
+    .map(linha => linha.map(campo => `"${String(campo).replaceAll('"', '""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "logs-auditoria-op-confeccao.csv";
+  link.click();
+
+  URL.revokeObjectURL(url);
+  registrarLog("logs_exportados", "auditoria", "logsAlteracoes", `${logs.length} logs exportados em CSV`);
 }
 
 async function registrarLog(acao, tipoAlvo, alvoId, detalhes = "") {
@@ -1098,7 +1148,8 @@ function labelAcaoLog(acao) {
     usuario_status_alterado: "Status de usuário",
     backup_importado: "Backup importado",
     backup_exportado: "Backup exportado",
-    relatorio_exportado: "Relatório exportado"
+    relatorio_exportado: "Relatório exportado",
+    logs_exportados: "Logs exportados"
   };
 
   return labels[acao] || acao || "-";
@@ -1106,9 +1157,7 @@ function labelAcaoLog(acao) {
 
 function formatarDataHora(valor) {
   if (!valor) return "-";
-
   const data = typeof valor.toDate === "function" ? valor.toDate() : new Date(valor);
-
   if (Number.isNaN(data.getTime())) return "-";
 
   return data.toLocaleString("pt-BR", {
