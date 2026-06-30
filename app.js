@@ -23,7 +23,8 @@ import {
   runTransaction,
   writeBatch,
   getDocs,
-  addDoc
+  addDoc,
+  where
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -384,6 +385,8 @@ function configurarProduto() {
       possuiBojo: document.getElementById("produtoBojo").checked,
       possuiRenda: document.getElementById("produtoRenda").checked,
       observacoes: document.getElementById("produtoObs").value.trim(),
+      cadastroPendente: false,
+      statusCadastro: "conferido",
       atualizadoPor: state.currentUser.uid,
       atualizadoEm: serverTimestamp()
     };
@@ -396,7 +399,13 @@ function configurarProduto() {
     try {
       const docId = produtoIdAtual || docIdSeguro(referencia);
       await setDoc(doc(db, "produtos", docId), produto, { merge: true });
-      await registrarLog(produtoIdAtual ? "produto_atualizado" : "produto_criado", "produto", docId, `Referência ${referencia} - ${nome}`);
+      const ordensAtualizadas = await atualizarOrdensDaReferencia(produto);
+      await registrarLog(
+        produtoIdAtual ? "produto_atualizado" : "produto_criado",
+        "produto",
+        docId,
+        `Referência ${referencia} - ${nome}. Ordens atualizadas: ${ordensAtualizadas}`
+      );
 
       limparFormProduto();
       toast("Produto salvo no Firebase.");
@@ -1465,7 +1474,10 @@ async function importarPDFConfirmado() {
           possuiAlca: false,
           possuiBojo: false,
           possuiRenda: false,
-          observacoes: "Cadastrado automaticamente pela importação de relatório externo PDF. Conferir alça, bojo e renda.",
+          cadastroPendente: true,
+          statusCadastro: "pendente",
+          pendencia: "Conferir se esta referência possui alça, bojo e renda/sutiã.",
+          observacoes: "Cadastrado automaticamente pela importação de relatório externo PDF. Conferir alça, bojo e renda/sutiã.",
           criadoPor: state.currentUser.uid,
           criadoEm: serverTimestamp(),
           atualizadoPor: state.currentUser.uid,
@@ -1478,6 +1490,7 @@ async function importarPDFConfirmado() {
 
     for (const item of registros) {
       const produtoExistente = state.produtos.find(prod => normalizarReferencia(prod.referencia) === item.referencia);
+      const referenciaPendente = !produtoExistente;
 
       const docId = docIdSeguro(`PDF-${item.numeroOP}-${item.lote || "SEMLOTE"}`);
 
@@ -1498,7 +1511,10 @@ async function importarPDFConfirmado() {
         possuiAlca: Boolean(produtoExistente?.possuiAlca),
         possuiBojo: Boolean(produtoExistente?.possuiBojo),
         possuiRenda: Boolean(produtoExistente?.possuiRenda),
-        observacoes: `Importado do relatório externo PDF. OP-Lote: ${item.opLote}.`,
+        referenciaPendente,
+        statusReferencia: referenciaPendente ? "pendente" : "conferida",
+        pendencia: referenciaPendente ? "Referência nova cadastrada automaticamente. Conferir alça, bojo e renda/sutiã no cadastro do produto." : "",
+        observacoes: `Importado do relatório externo PDF. OP-Lote: ${item.opLote}.${referenciaPendente ? " Referência pendente de conferência." : ""}`,
         status: "aberta",
         origem: "pdf_externo",
         criadoPor: state.currentUser.uid,
@@ -1735,12 +1751,16 @@ function renderDashboard() {
   document.getElementById("totalRenda").textContent = state.ordens.filter(op => op.possuiRenda).length;
   document.getElementById("totalAlca").textContent = state.ordens.filter(op => op.possuiAlca).length;
   document.getElementById("totalBojo").textContent = state.ordens.filter(op => op.possuiBojo).length;
+  const totalPendentesEl = document.getElementById("totalPendentes");
+  if (totalPendentesEl) {
+    totalPendentesEl.textContent = state.ordens.filter(op => op.referenciaPendente || op.statusReferencia === "pendente").length;
+  }
 
   const ultimas = [...state.ordens].slice(0, 8);
   const tbody = document.getElementById("ultimasOrdens");
 
   if (!ultimas.length) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty">Nenhuma ordem cadastrada ainda.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="empty">Nenhuma ordem cadastrada ainda.</td></tr>`;
     return;
   }
 
@@ -1756,6 +1776,7 @@ function renderDashboard() {
       <td>${simNaoBadge(op.possuiAlca)}</td>
       <td>${simNaoBadge(op.possuiBojo)}</td>
       <td>${simNaoBadge(op.possuiRenda)}</td>
+      <td>${statusReferenciaBadge(op)}</td>
     </tr>
   `).join("");
 }
@@ -1773,7 +1794,7 @@ function renderProdutos() {
   const tbody = document.getElementById("listaProdutos");
 
   if (!produtos.length) {
-    tbody.innerHTML = `<tr><td colspan="${ehAdmin() ? 6 : 5}" class="empty">Nenhum produto cadastrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${ehAdmin() ? 7 : 6}" class="empty">Nenhum produto cadastrado.</td></tr>`;
     return;
   }
 
@@ -1784,6 +1805,7 @@ function renderProdutos() {
       <td>${simNaoBadge(produto.possuiAlca)}</td>
       <td>${simNaoBadge(produto.possuiBojo)}</td>
       <td>${simNaoBadge(produto.possuiRenda)}</td>
+      <td>${statusProdutoBadge(produto)}</td>
       ${ehAdmin() ? `<td>
         <button class="btn btn-sm" onclick="editarProduto('${produto.id}')">Editar</button>
         <button class="btn btn-sm btn-danger" onclick="excluirProduto('${produto.id}')">Excluir</button>
@@ -1808,7 +1830,7 @@ function renderOrdens() {
   const tbody = document.getElementById("listaOrdens");
 
   if (!ordens.length) {
-    tbody.innerHTML = `<tr><td colspan="11" class="empty">Nenhuma ordem cadastrada.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="empty">Nenhuma ordem cadastrada.</td></tr>`;
     return;
   }
 
@@ -1824,6 +1846,7 @@ function renderOrdens() {
       <td>${simNaoBadge(op.possuiAlca)}</td>
       <td>${simNaoBadge(op.possuiBojo)}</td>
       <td>${simNaoBadge(op.possuiRenda)}</td>
+      <td>${statusReferenciaBadge(op)}</td>
       <td>
         <button class="btn btn-sm" onclick="editarOrdem('${op.id}')">Editar</button>
         ${ehAdmin() ? `<button class="btn btn-sm btn-danger" onclick="excluirOrdem('${op.id}')">Excluir</button>` : ""}
@@ -1945,6 +1968,67 @@ function docIdSeguro(valor) {
 function extrairCorDeObservacao(texto) {
   const match = String(texto || "").match(/cor\s*:\s*([^|,\n\r;]+)/i);
   return match ? match[1].trim() : "";
+}
+
+
+function statusReferenciaBadge(op) {
+  const pendente = Boolean(op?.referenciaPendente) || op?.statusReferencia === "pendente";
+
+  if (pendente) {
+    return `<span class="badge pending">Pendente</span>`;
+  }
+
+  return `<span class="badge ok">Conferida</span>`;
+}
+
+function statusProdutoBadge(produto) {
+  const pendente = Boolean(produto?.cadastroPendente) || produto?.statusCadastro === "pendente";
+
+  if (pendente) {
+    return `<span class="badge pending">Pendente</span>`;
+  }
+
+  return `<span class="badge ok">Conferido</span>`;
+}
+
+async function atualizarOrdensDaReferencia(produto) {
+  if (!produto?.referencia) return 0;
+
+  const ordensQuery = query(
+    collection(db, "ordensProducao"),
+    where("referencia", "==", normalizarReferencia(produto.referencia))
+  );
+
+  const snap = await getDocs(ordensQuery);
+
+  if (snap.empty) return 0;
+
+  let batch = writeBatch(db);
+  let contador = 0;
+  let total = 0;
+
+  snap.docs.forEach(documento => {
+    batch.set(doc(db, "ordensProducao", documento.id), {
+      produtoNome: produto.nome,
+      possuiAlca: Boolean(produto.possuiAlca),
+      possuiBojo: Boolean(produto.possuiBojo),
+      possuiRenda: Boolean(produto.possuiRenda),
+      referenciaPendente: false,
+      statusReferencia: "conferida",
+      pendencia: "",
+      atualizadoPor: state.currentUser.uid,
+      atualizadoEm: serverTimestamp()
+    }, { merge: true });
+
+    contador++;
+    total++;
+  });
+
+  if (contador > 0) {
+    await batch.commit();
+  }
+
+  return total;
 }
 
 function simNaoBadge(valor) {

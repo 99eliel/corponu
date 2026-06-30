@@ -782,3 +782,19 @@ small {
     grid-template-columns: 1fr;
   }
 }
+
+
+.card-warning {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, #fff, rgba(245, 158, 11, 0.08));
+}
+
+.badge.pending {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+}
+
+.badge.ok {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}

@@ -273,3 +273,32 @@ Antes de importar, o sistema mostra uma prévia.
 6. Clique em **Confirmar importação do PDF**.
 
 Se a referência ainda não existir no cadastro de produtos, o sistema pode cadastrar automaticamente com alça, bojo e renda desmarcados. Depois é só editar a referência e marcar corretamente.
+
+
+## Atualização: referências pendentes de conferência
+
+Ao importar um PDF, se a referência da OP ainda não existir no cadastro de produtos, o sistema agora marca essa OP como **Pendente**.
+
+Também cria o produto automaticamente com:
+
+```txt
+cadastroPendente: true
+statusCadastro: pendente
+```
+
+E a OP importada fica com:
+
+```txt
+referenciaPendente: true
+statusReferencia: pendente
+```
+
+Assim os responsáveis sabem que precisam abrir o cadastro da referência e conferir se possui:
+
+```txt
+Alça
+Bojo
+Renda / Sutiã
+```
+
+Quando o admin salva/atualiza o produto manualmente, o sistema atualiza automaticamente todas as ordens daquela referência, copia as marcações corretas de alça, bojo e renda e remove o status de pendência das OPs.
