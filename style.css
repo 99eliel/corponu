@@ -824,3 +824,22 @@ small {
     margin-top: 8px;
   }
 }
+
+
+#manejo table {
+  min-width: 1500px;
+}
+
+#manejo textarea {
+  min-height: 80px;
+}
+
+.manejo-auto {
+  background: #f8fafc;
+  color: #475467;
+  cursor: not-allowed;
+}
+
+.manejo-phase {
+  font-weight: 900;
+}

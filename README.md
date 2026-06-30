@@ -332,3 +332,61 @@ Botão Ver OPs
 3. Marque se a referência possui **alça**, **bojo** e **renda/sutiã**.
 4. Salve o produto.
 5. O sistema atualiza automaticamente todas as OPs daquela referência e remove o status de pendente.
+
+
+## Atualização: função Manejo
+
+Foi adicionada a aba **Manejo**.
+
+### Como funciona
+
+O usuário seleciona uma OP já cadastrada no sistema. Automaticamente o sistema preenche:
+
+```txt
+Nº OP
+Referência
+Cor
+QTI / Quantidade
+```
+
+Os demais campos são preenchidos manualmente pelo usuário:
+
+```txt
+Silk
+Data tecido
+Fase
+Data
+Facção
+Chegada
+Falta
+Produção
+CELU
+Necessidade
+Coluna / Observação
+```
+
+### Fases com recomendação automática
+
+O campo **Fase** é livre. O usuário pode digitar qualquer fase nova.
+
+Depois que uma fase é salva pela primeira vez, ela passa a aparecer como recomendação nas próximas vezes.
+
+Exemplos:
+
+```txt
+BOJOS ENCAPADOS
+COSTURA
+ACABAMENTO
+REVISÃO
+```
+
+### Firestore
+
+Foram adicionadas as coleções:
+
+```txt
+manejos
+fasesManejo
+```
+
+Atualize as regras do Firebase usando o arquivo `firebase-rules.txt`.

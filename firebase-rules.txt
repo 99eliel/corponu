@@ -49,6 +49,18 @@ service cloud.firestore {
       allow delete: if admin();
     }
 
+    match /manejos/{manejoId} {
+      allow read: if usuarioComum();
+      allow create, update: if usuarioComum();
+      allow delete: if admin();
+    }
+
+    match /fasesManejo/{faseId} {
+      allow read: if usuarioComum();
+      allow create, update: if usuarioComum();
+      allow delete: if admin();
+    }
+
     match /logsAlteracoes/{logId} {
       allow read: if admin();
       allow create: if usuarioComum()
