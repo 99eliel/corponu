@@ -302,3 +302,33 @@ Renda / Sutiã
 ```
 
 Quando o admin salva/atualiza o produto manualmente, o sistema atualiza automaticamente todas as ordens daquela referência, copia as marcações corretas de alça, bojo e renda e remove o status de pendência das OPs.
+
+
+## Atualização: painel separado de referências pendentes
+
+A aba **Produtos / Referências** agora possui um bloco separado no topo:
+
+```txt
+Referências pendentes de conferência
+```
+
+Esse bloco mostra somente as referências criadas automaticamente pela importação do PDF e que ainda precisam ser conferidas.
+
+Para cada referência pendente, aparece:
+
+```txt
+Referência
+Produto
+Quantidade de OPs pendentes
+Observação da pendência
+Botão Conferir
+Botão Ver OPs
+```
+
+### Como resolver uma pendência
+
+1. Vá em **Produtos / Referências**.
+2. No bloco **Referências pendentes de conferência**, clique em **Conferir**.
+3. Marque se a referência possui **alça**, **bojo** e **renda/sutiã**.
+4. Salve o produto.
+5. O sistema atualiza automaticamente todas as OPs daquela referência e remove o status de pendente.

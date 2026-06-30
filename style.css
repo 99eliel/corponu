@@ -798,3 +798,29 @@ small {
   background: rgba(22, 163, 74, 0.12);
   color: #15803d;
 }
+
+
+.pending-panel {
+  margin-bottom: 18px;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, #ffffff, rgba(245, 158, 11, 0.06));
+}
+
+.pending-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 780px) {
+  .pending-count {
+    width: 100%;
+    margin-top: 8px;
+  }
+}

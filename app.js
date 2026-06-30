@@ -1490,7 +1490,7 @@ async function importarPDFConfirmado() {
 
     for (const item of registros) {
       const produtoExistente = state.produtos.find(prod => normalizarReferencia(prod.referencia) === item.referencia);
-      const referenciaPendente = !produtoExistente;
+      const referenciaPendente = !produtoExistente || Boolean(produtoExistente?.cadastroPendente) || produtoExistente?.statusCadastro === "pendente";
 
       const docId = docIdSeguro(`PDF-${item.numeroOP}-${item.lote || "SEMLOTE"}`);
 
@@ -1737,6 +1737,7 @@ function baixarBackupAtual() {
 function renderTudo() {
   renderDashboard();
   renderProdutos();
+  renderProdutosPendentes();
   renderOrdens();
   renderDatalistReferencias();
   renderDatalistCores();
@@ -1812,6 +1813,65 @@ function renderProdutos() {
       </td>` : ""}
     </tr>
   `).join("");
+}
+
+
+function renderProdutosPendentes() {
+  const tbody = document.getElementById("listaProdutosPendentes");
+  const totalEl = document.getElementById("totalProdutosPendentes");
+
+  if (!tbody || !totalEl) return;
+
+  const pendentes = state.produtos
+    .filter(produto => Boolean(produto.cadastroPendente) || produto.statusCadastro === "pendente")
+    .sort((a, b) => String(a.referencia).localeCompare(String(b.referencia)));
+
+  totalEl.textContent = `${pendentes.length} pendente${pendentes.length === 1 ? "" : "s"}`;
+
+  if (!pendentes.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Nenhuma referência pendente no momento.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = pendentes.map(produto => {
+    const totalOps = state.ordens.filter(op => {
+      return normalizarReferencia(op.referencia) === normalizarReferencia(produto.referencia)
+        && (op.referenciaPendente || op.statusReferencia === "pendente");
+    }).length;
+
+    return `
+      <tr>
+        <td><strong>${escapeHtml(produto.referencia)}</strong></td>
+        <td>${escapeHtml(produto.nome || "-")}</td>
+        <td>${totalOps}</td>
+        <td>${escapeHtml(produto.pendencia || "Conferir alça, bojo e renda/sutiã.")}</td>
+        <td>
+          ${ehAdmin() ? `<button class="btn btn-sm btn-primary" onclick="conferirReferenciaPendente('${produto.id}')">Conferir</button>` : ""}
+          <button class="btn btn-sm" onclick="verOrdensDaReferencia('${escapeHtml(produto.referencia)}')">Ver OPs</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function conferirReferenciaPendente(id) {
+  if (!ehAdmin()) {
+    toast("Apenas admin pode conferir referências pendentes.");
+    return;
+  }
+
+  editarProduto(id);
+  toast("Marque alça, bojo e renda/sutiã. Ao salvar, as OPs dessa referência serão atualizadas.");
+}
+
+function verOrdensDaReferencia(referencia) {
+  abrirPagina("ordens");
+  const busca = document.getElementById("buscaOrdem");
+
+  if (busca) {
+    busca.value = normalizarReferencia(referencia);
+    renderOrdens();
+  }
 }
 
 function renderOrdens() {
@@ -2061,3 +2121,5 @@ window.editarOrdem = editarOrdem;
 window.excluirOrdem = excluirOrdem;
 window.alternarUsuario = alternarUsuario;
 window.iniciarCadastroProdutoPelaOrdem = iniciarCadastroProdutoPelaOrdem;
+window.conferirReferenciaPendente = conferirReferenciaPendente;
+window.verOrdensDaReferencia = verOrdensDaReferencia;
