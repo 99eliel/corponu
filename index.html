@@ -338,7 +338,7 @@
           <div class="panel-header">
             <div>
               <h3>Relatórios de produção</h3>
-              <p>Enfesto, corte e separação são gerais. Renda, alça e bojo mostram somente o setor selecionado.</p>
+              <p>Enfesto, corte, silk e separação são gerais. Renda, alça e bojo mostram somente o setor selecionado.</p>
             </div>
           </div>
 
@@ -349,6 +349,7 @@
             <button class="report-btn" data-relatorio="renda">Renda</button>
             <button class="report-btn" data-relatorio="alca">Alça</button>
             <button class="report-btn" data-relatorio="bojo">Bojo</button>
+            <button class="report-btn" data-relatorio="silk">Silk</button>
           </div>
 
           <div class="filters">
@@ -531,6 +532,95 @@
         <div class="panel form">
           <div class="panel-header">
             <div>
+              <h3>Importar relatório externo PDF</h3>
+              <p>Extraia automaticamente OP-Lote, referência, cor e planejado de relatórios em PDF.</p>
+            </div>
+          </div>
+
+          <div class="notice small">
+            <strong>Formato esperado:</strong> relatório com blocos contendo OP-Lote, Referência, Cor e Planejado.
+            O sistema vai gerar uma prévia antes de importar.
+          </div>
+
+          <div class="pdf-import-grid">
+            <label>
+              Semana
+              <select id="pdfSemana">
+                <option value="1">Semana 1</option>
+                <option value="2">Semana 2</option>
+                <option value="3">Semana 3</option>
+                <option value="4">Semana 4</option>
+                <option value="5">Semana 5</option>
+              </select>
+            </label>
+
+            <label>
+              Mês
+              <select id="pdfMes">
+                <option>Janeiro</option>
+                <option>Fevereiro</option>
+                <option>Março</option>
+                <option>Abril</option>
+                <option>Maio</option>
+                <option>Junho</option>
+                <option>Julho</option>
+                <option>Agosto</option>
+                <option>Setembro</option>
+                <option>Outubro</option>
+                <option>Novembro</option>
+                <option>Dezembro</option>
+              </select>
+            </label>
+
+            <label>
+              Ano
+              <input id="pdfAno" type="number" min="2020" max="2100" />
+            </label>
+
+            <label class="check pdf-check">
+              <input id="pdfCriarProdutos" type="checkbox" checked />
+              <span>Cadastrar referências novas automaticamente</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <label class="btn btn-primary file-btn">
+              Ler relatório PDF
+              <input type="file" id="inputImportarPDF" accept=".pdf,application/pdf" hidden />
+            </label>
+
+            <button class="btn btn-success" id="btnConfirmarImportacaoPDF" type="button" disabled>
+              Confirmar importação do PDF
+            </button>
+
+            <button class="btn btn-danger" id="btnZerarOrdens" type="button">
+              Zerar ordens de produção
+            </button>
+          </div>
+
+          <div id="pdfImportResumo" class="preview hidden"></div>
+
+          <div class="table-wrap hidden" id="pdfPreviewWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>OP</th>
+                  <th>Lote</th>
+                  <th>Referência</th>
+                  <th>Produto</th>
+                  <th>Cor</th>
+                  <th>Planejado</th>
+                  <th>Status ref.</th>
+                </tr>
+              </thead>
+              <tbody id="pdfPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel form">
+          <div class="panel-header">
+            <div>
               <h3>Importar dados para o Firebase</h3>
               <p>Use para subir os dados extraídos da planilha para o Firestore.</p>
             </div>
@@ -545,8 +635,8 @@
           </div>
 
           <div class="notice">
-            <strong>Importante:</strong> esta importação é indicada para admin. Use o arquivo
-            <strong>backup-op-confeccao-planilha.json</strong> que está dentro deste ZIP.
+            <strong>Importante:</strong> esta importação por JSON é indicada para admin. Use o arquivo
+            <strong>backup-op-confeccao-planilha.json</strong> que está dentro deste ZIP, se precisar restaurar a base da planilha antiga.
           </div>
         </div>
       </section>

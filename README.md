@@ -172,3 +172,104 @@ logsAlteracoes
 ```
 
 Copie novamente o conteúdo do arquivo `firebase-rules.txt` para o Firestore Rules e publique.
+
+
+## Atualização: relatório Silk obrigatório
+
+Foi adicionado o relatório **Silk** como processo obrigatório.
+
+A ordem dos relatórios agora é:
+
+```txt
+Enfesto
+Corte
+Silk
+Separação
+Renda
+Alça
+Bojo
+```
+
+O relatório **Silk** funciona como Enfesto, Corte e Separação: mostra todas as ordens de produção.
+
+Também foi ajustado o log de login para não exibir mais o UID do Firebase no campo "Item". Agora o item aparece como "Sistema".
+
+
+## Correção: posição final do Silk
+
+O relatório **Silk** foi movido para depois de **Bojo**.
+
+A ordem final dos relatórios ficou:
+
+```txt
+Enfesto
+Corte
+Separação
+Renda
+Alça
+Bojo
+Silk
+```
+
+O **Silk** continua sendo obrigatório e geral, mostrando todas as ordens de produção.
+
+
+## Atualização: zerar ordens e importar relatório externo PDF
+
+Esta versão adiciona duas funções administrativas na aba **Importar / Backup**.
+
+### 1. Zerar ordens de produção
+
+O botão **Zerar ordens de produção** apaga todos os documentos da coleção:
+
+```txt
+ordensProducao
+```
+
+Ele não apaga:
+
+```txt
+produtos
+usuarios
+logsAlteracoes
+configuracoes
+```
+
+Também registra a ação nos logs.
+
+### 2. Importar relatório externo PDF
+
+A função lê PDFs no padrão do relatório:
+
+```txt
+OP-Lote
+Referência
+COR / TAMANHO
+Planejado
+```
+
+Ela extrai:
+
+```txt
+OP-Lote
+Número da OP
+Lote
+Referência
+Produto
+Código da cor
+Cor
+Planejado
+```
+
+Antes de importar, o sistema mostra uma prévia.
+
+### Como usar
+
+1. Entre como admin.
+2. Vá em **Importar / Backup**.
+3. Selecione semana, mês e ano.
+4. Clique em **Ler relatório PDF**.
+5. Confira a prévia.
+6. Clique em **Confirmar importação do PDF**.
+
+Se a referência ainda não existir no cadastro de produtos, o sistema pode cadastrar automaticamente com alça, bojo e renda desmarcados. Depois é só editar a referência e marcar corretamente.

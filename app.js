@@ -1,3 +1,4 @@
+import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.mjs";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getAuth,
@@ -42,6 +43,8 @@ const db = getFirestore(app);
 const secondaryApp = initializeApp(firebaseConfig, "SecondaryUserCreator");
 const secondaryAuth = getAuth(secondaryApp);
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.mjs";
+
 const state = {
   currentUser: null,
   perfil: null,
@@ -49,6 +52,7 @@ const state = {
   ordens: [],
   usuarios: [],
   logs: [],
+  pdfImportacaoPendente: [],
   relatorioAtual: "enfesto",
   unsubscribers: []
 };
@@ -68,7 +72,7 @@ const pageInfo = {
   },
   relatorios: {
     title: "Relatórios",
-    subtitle: "Relatórios gerais e específicos por setor."
+    subtitle: "Relatórios gerais, silk obrigatório e específicos por setor."
   },
   usuarios: {
     title: "Usuários",
@@ -93,6 +97,11 @@ const reportInfo = {
   corte: {
     title: "Relatório de Corte",
     subtitle: "Processo geral: todas as ordens aparecem neste relatório.",
+    tipo: "geral"
+  },
+  silk: {
+    title: "Relatório de Silk",
+    subtitle: "Processo obrigatório: todas as ordens aparecem neste relatório.",
     tipo: "geral"
   },
   separacao: {
@@ -132,8 +141,10 @@ document.addEventListener("DOMContentLoaded", () => {
   configurarRelatorios();
   configurarUsuarios();
   configurarLogs();
+  configurarImportadorPDF();
   configurarBackup();
   preencherAnoAtual();
+  preencherCamposPDFImportacao();
 });
 
 
@@ -222,7 +233,7 @@ function configurarAuth() {
       state.perfil = perfil;
       mostrarSistema();
       iniciarListenersFirestore();
-      registrarLog("login", "auth", user.uid, "Usuário entrou no sistema.");
+      registrarLog("login", "sistema", "Sistema", "Usuário entrou no sistema.");
     } catch (error) {
       console.error(error);
       await signOut(auth);
@@ -1149,7 +1160,9 @@ function labelAcaoLog(acao) {
     backup_importado: "Backup importado",
     backup_exportado: "Backup exportado",
     relatorio_exportado: "Relatório exportado",
-    logs_exportados: "Logs exportados"
+    logs_exportados: "Logs exportados",
+    pdf_importado: "PDF importado",
+    ordens_zeradas: "Ordens zeradas"
   };
 
   return labels[acao] || acao || "-";
@@ -1171,6 +1184,397 @@ function normalizarTexto(valor) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+
+function configurarImportadorPDF() {
+  const input = document.getElementById("inputImportarPDF");
+  const confirmar = document.getElementById("btnConfirmarImportacaoPDF");
+  const zerar = document.getElementById("btnZerarOrdens");
+
+  if (input) {
+    input.addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (!ehAdmin()) {
+        toast("Apenas admin pode importar relatório PDF.");
+        event.target.value = "";
+        return;
+      }
+
+      try {
+        toast("Lendo PDF, aguarde...");
+        const texto = await extrairTextoPDF(file);
+        const registros = extrairOrdensDoRelatorioPDF(texto);
+
+        state.pdfImportacaoPendente = registros;
+        renderPreviewPDF(registros);
+
+        if (registros.length) {
+          toast(`${registros.length} ordens encontradas no PDF.`);
+        } else {
+          toast("Nenhuma ordem foi encontrada no PDF.");
+        }
+      } catch (error) {
+        console.error(error);
+        toast("Erro ao ler PDF. Verifique se o arquivo é um relatório válido.");
+      }
+
+      event.target.value = "";
+    });
+  }
+
+  if (confirmar) {
+    confirmar.addEventListener("click", importarPDFConfirmado);
+  }
+
+  if (zerar) {
+    zerar.addEventListener("click", zerarOrdensProducao);
+  }
+}
+
+function preencherCamposPDFImportacao() {
+  const ano = new Date().getFullYear();
+  const mes = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ][new Date().getMonth()];
+
+  const pdfAno = document.getElementById("pdfAno");
+  const pdfMes = document.getElementById("pdfMes");
+
+  if (pdfAno) pdfAno.value = ano;
+  if (pdfMes) pdfMes.value = mes;
+}
+
+async function extrairTextoPDF(file) {
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  let textoFinal = "";
+
+  for (let pagina = 1; pagina <= pdf.numPages; pagina++) {
+    const page = await pdf.getPage(pagina);
+    const content = await page.getTextContent();
+
+    const itens = content.items
+      .map(item => ({
+        str: item.str,
+        x: item.transform[4],
+        y: Math.round(item.transform[5])
+      }))
+      .filter(item => String(item.str || "").trim());
+
+    itens.sort((a, b) => {
+      if (Math.abs(b.y - a.y) > 2) return b.y - a.y;
+      return a.x - b.x;
+    });
+
+    const linhas = [];
+    let linhaAtual = [];
+    let yAtual = null;
+
+    for (const item of itens) {
+      if (yAtual === null || Math.abs(item.y - yAtual) <= 2) {
+        linhaAtual.push(item);
+        yAtual = yAtual === null ? item.y : yAtual;
+      } else {
+        linhas.push(linhaAtual.sort((a, b) => a.x - b.x).map(i => i.str).join(" ").replace(/\s+/g, " ").trim());
+        linhaAtual = [item];
+        yAtual = item.y;
+      }
+    }
+
+    if (linhaAtual.length) {
+      linhas.push(linhaAtual.sort((a, b) => a.x - b.x).map(i => i.str).join(" ").replace(/\s+/g, " ").trim());
+    }
+
+    textoFinal += "\n" + linhas.join("\n") + "\n";
+  }
+
+  return textoFinal;
+}
+
+function extrairOrdensDoRelatorioPDF(texto) {
+  const registros = [];
+  const regex = /OP-Lote:\s*([^\n]+?)\s+Situação:[\s\S]*?Referência:\s*([^\n]+)\n[\s\S]*?COR\s*\/\s*TAMANHO[^\n]*\n([\s\S]*?)Planejado:\s*([\d.,]+)/g;
+  let match;
+
+  while ((match = regex.exec(texto)) !== null) {
+    const opLote = limparTexto(match[1]);
+    const referenciaLinha = limparTexto(match[2]);
+    const blocoCor = match[3] || "";
+    const planejadoTexto = limparTexto(match[4]);
+
+    const refMatch = referenciaLinha.match(/^([^\s-]+)\s*-\s*(.+)$/);
+    const referencia = normalizarReferencia(refMatch ? refMatch[1] : referenciaLinha);
+    const produto = limparTexto(refMatch ? refMatch[2] : "");
+
+    const corLinha = encontrarLinhaCor(blocoCor);
+    const corMatch = corLinha.match(/^(\d{3,4})\s*-\s*(.+?)(?:\s+\d{1,4},\d{2}|\s+Planejado:|$)/);
+
+    const corCodigo = corMatch ? limparTexto(corMatch[1]) : "";
+    const cor = normalizarCor(corMatch ? corMatch[2] : corLinha);
+
+    const partesOp = opLote.split("-").map(parte => parte.trim());
+    const numeroOrdem = partesOp[0] || opLote;
+    const lote = partesOp[1] || "";
+
+    if (!numeroOrdem || !referencia || !cor || !planejadoTexto) continue;
+
+    registros.push({
+      numeroOP: numeroOrdem,
+      opLote,
+      lote,
+      referencia,
+      produto,
+      corCodigo,
+      cor,
+      planejadoTexto,
+      quantidade: numeroBrasileiroParaFloat(planejadoTexto)
+    });
+  }
+
+  const unicos = new Map();
+
+  for (const item of registros) {
+    const chave = `${item.numeroOP}-${item.lote}-${item.referencia}-${item.cor}`;
+    if (!unicos.has(chave)) {
+      unicos.set(chave, item);
+    }
+  }
+
+  return [...unicos.values()];
+}
+
+function encontrarLinhaCor(bloco) {
+  const linhas = String(bloco || "").split(/\n/).map(limparTexto).filter(Boolean);
+  return linhas.find(linha => /^\d{3,4}\s*-\s*/.test(linha)) || "";
+}
+
+function limparTexto(valor) {
+  return String(valor || "").replace(/\s+/g, " ").trim();
+}
+
+function numeroBrasileiroParaFloat(valor) {
+  const normalizado = String(valor || "")
+    .replace(/\./g, "")
+    .replace(",", ".")
+    .replace(/[^\d.]/g, "");
+
+  return Number(normalizado || 0);
+}
+
+function renderPreviewPDF(registros) {
+  const resumo = document.getElementById("pdfImportResumo");
+  const wrap = document.getElementById("pdfPreviewWrap");
+  const tbody = document.getElementById("pdfPreviewBody");
+  const btnConfirmar = document.getElementById("btnConfirmarImportacaoPDF");
+
+  if (!resumo || !wrap || !tbody || !btnConfirmar) return;
+
+  if (!registros.length) {
+    resumo.classList.remove("hidden");
+    wrap.classList.add("hidden");
+    btnConfirmar.disabled = true;
+    resumo.innerHTML = "<strong>Nenhuma OP encontrada.</strong><br>Confira se o PDF está no formato correto.";
+    tbody.innerHTML = "";
+    return;
+  }
+
+  const referenciasExistentes = new Set(state.produtos.map(produto => normalizarReferencia(produto.referencia)));
+  const refsNovas = [...new Set(registros.map(item => item.referencia).filter(ref => !referenciasExistentes.has(ref)))];
+
+  resumo.classList.remove("hidden");
+  wrap.classList.remove("hidden");
+  btnConfirmar.disabled = false;
+
+  resumo.innerHTML = `
+    <strong>Prévia do PDF:</strong><br>
+    Ordens encontradas: ${registros.length}<br>
+    Referências novas: ${refsNovas.length}${refsNovas.length ? ` (${refsNovas.slice(0, 12).join(", ")}${refsNovas.length > 12 ? "..." : ""})` : ""}
+  `;
+
+  tbody.innerHTML = registros.slice(0, 300).map(item => {
+    const existe = referenciasExistentes.has(item.referencia);
+    return `
+      <tr>
+        <td><strong>${escapeHtml(item.numeroOP)}</strong></td>
+        <td>${escapeHtml(item.lote || "-")}</td>
+        <td>${escapeHtml(item.referencia)}</td>
+        <td>${escapeHtml(item.produto || "-")}</td>
+        <td>${escapeHtml(item.cor)}</td>
+        <td>${escapeHtml(item.planejadoTexto)}</td>
+        <td class="${existe ? "pdf-ok" : "pdf-missing"}">${existe ? "Cadastrada" : "Nova"}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function importarPDFConfirmado() {
+  if (!ehAdmin()) {
+    toast("Apenas admin pode importar PDF.");
+    return;
+  }
+
+  const registros = state.pdfImportacaoPendente || [];
+
+  if (!registros.length) {
+    toast("Nenhum PDF lido para importar.");
+    return;
+  }
+
+  const semana = Number(document.getElementById("pdfSemana").value);
+  const mes = document.getElementById("pdfMes").value;
+  const ano = Number(document.getElementById("pdfAno").value);
+  const criarProdutos = document.getElementById("pdfCriarProdutos").checked;
+
+  if (!semana || !mes || !ano) {
+    toast("Informe semana, mês e ano para importar.");
+    return;
+  }
+
+  const referenciasExistentes = new Set(state.produtos.map(produto => normalizarReferencia(produto.referencia)));
+  const refsNovas = [...new Set(registros.map(item => item.referencia).filter(ref => !referenciasExistentes.has(ref)))];
+
+  if (refsNovas.length && !criarProdutos) {
+    toast("Existem referências novas. Marque a opção para cadastrar automaticamente ou cadastre antes.");
+    return;
+  }
+
+  const confirmar = confirm(`Importar ${registros.length} ordens do PDF para o Firestore?`);
+  if (!confirmar) return;
+
+  try {
+    let batch = writeBatch(db);
+    let contador = 0;
+
+    if (criarProdutos) {
+      const mapaProdutosNovos = new Map();
+
+      for (const item of registros) {
+        if (!referenciasExistentes.has(item.referencia) && !mapaProdutosNovos.has(item.referencia)) {
+          mapaProdutosNovos.set(item.referencia, item.produto || `Referência ${item.referencia}`);
+        }
+      }
+
+      for (const [referencia, nome] of mapaProdutosNovos.entries()) {
+        batch.set(doc(db, "produtos", docIdSeguro(referencia)), {
+          referencia,
+          nome,
+          possuiAlca: false,
+          possuiBojo: false,
+          possuiRenda: false,
+          observacoes: "Cadastrado automaticamente pela importação de relatório externo PDF. Conferir alça, bojo e renda.",
+          criadoPor: state.currentUser.uid,
+          criadoEm: serverTimestamp(),
+          atualizadoPor: state.currentUser.uid,
+          atualizadoEm: serverTimestamp()
+        }, { merge: true });
+
+        contador++;
+      }
+    }
+
+    for (const item of registros) {
+      const produtoExistente = state.produtos.find(prod => normalizarReferencia(prod.referencia) === item.referencia);
+
+      const docId = docIdSeguro(`PDF-${item.numeroOP}-${item.lote || "SEMLOTE"}`);
+
+      batch.set(doc(db, "ordensProducao", docId), {
+        numeroOP: String(item.numeroOP),
+        numeroOPExterno: String(item.numeroOP),
+        loteExterno: String(item.lote || ""),
+        opLoteExterno: item.opLote,
+        referencia: item.referencia,
+        cor: item.cor,
+        corCodigo: item.corCodigo,
+        produtoNome: produtoExistente?.nome || item.produto || `Referência ${item.referencia}`,
+        semana,
+        mes,
+        ano,
+        quantidade: item.quantidade,
+        quantidadePlanejadaTexto: item.planejadoTexto,
+        possuiAlca: Boolean(produtoExistente?.possuiAlca),
+        possuiBojo: Boolean(produtoExistente?.possuiBojo),
+        possuiRenda: Boolean(produtoExistente?.possuiRenda),
+        observacoes: `Importado do relatório externo PDF. OP-Lote: ${item.opLote}.`,
+        status: "aberta",
+        origem: "pdf_externo",
+        criadoPor: state.currentUser.uid,
+        criadoEm: serverTimestamp(),
+        atualizadoPor: state.currentUser.uid,
+        atualizadoEm: serverTimestamp()
+      }, { merge: true });
+
+      contador++;
+
+      if (contador >= 430) {
+        await batch.commit();
+        batch = writeBatch(db);
+        contador = 0;
+      }
+    }
+
+    if (contador > 0) {
+      await batch.commit();
+    }
+
+    await registrarLog("pdf_importado", "importacao", "relatorio-pdf", `${registros.length} ordens importadas do PDF. Referências novas: ${refsNovas.length}.`);
+
+    state.pdfImportacaoPendente = [];
+    renderPreviewPDF([]);
+
+    toast("PDF importado com sucesso.");
+  } catch (error) {
+    console.error(error);
+    toast("Erro ao importar PDF para o Firestore.");
+  }
+}
+
+async function zerarOrdensProducao() {
+  if (!ehAdmin()) {
+    toast("Apenas admin pode zerar ordens.");
+    return;
+  }
+
+  if (!confirm("Tem certeza que deseja apagar TODAS as ordens de produção do Firestore?")) return;
+  if (!confirm("Confirma novamente? Essa ação não apaga produtos, usuários nem logs, apenas ordens de produção.")) return;
+
+  try {
+    const snap = await getDocs(collection(db, "ordensProducao"));
+    let batch = writeBatch(db);
+    let contador = 0;
+    let total = 0;
+
+    for (const documento of snap.docs) {
+      batch.delete(doc(db, "ordensProducao", documento.id));
+      contador++;
+      total++;
+
+      if (contador >= 430) {
+        await batch.commit();
+        batch = writeBatch(db);
+        contador = 0;
+      }
+    }
+
+    if (contador > 0) {
+      await batch.commit();
+    }
+
+    await setDoc(doc(db, "configuracoes", "sistema"), {
+      ultimoNumeroOP: 0,
+      atualizadoEm: serverTimestamp()
+    }, { merge: true });
+
+    await registrarLog("ordens_zeradas", "ordensProducao", "todas", `${total} ordens de produção foram removidas.`);
+
+    toast(`${total} ordens de produção foram apagadas.`);
+  } catch (error) {
+    console.error(error);
+    toast("Erro ao zerar ordens de produção.");
+  }
 }
 
 function configurarBackup() {
